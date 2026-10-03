@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Leads | Merit Pools Admin</title>
+<style>
+:root{--navy:#0a2e57;--red:#d42a2f;--sun:#ffc21a;--line:#dbe8f0;--muted:#5a6b80;--foam:#f2f9fc}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,sans-serif;background:var(--foam);color:#142235}
+header{background:var(--navy);color:#fff;padding:16px 24px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+header h1{margin:0;font-size:1.2rem}header button{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:999px;padding:.5em 1.1em;cursor:pointer;font:inherit}
+main{max-width:1200px;margin:0 auto;padding:24px 16px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:20px}
+.stat{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 16px;cursor:pointer}
+.stat.active{border-color:var(--navy);box-shadow:0 0 0 2px var(--navy) inset}
+.stat b{display:block;font-size:1.6rem;color:var(--navy)}.stat span{text-transform:capitalize;color:var(--muted);font-size:.85rem}
+.toolbar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}.toolbar input{flex:1;min-width:200px;padding:.7em .9em;border:1.5px solid var(--line);border-radius:10px;font:inherit}
+.lead{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:12px;display:grid;grid-template-columns:1.2fr 1.4fr 1fr;gap:18px}
+.lead h3{margin:0 0 4px;font-size:1.05rem;color:var(--navy)}.lead .meta{font-size:.85rem;color:var(--muted)}
+.lead a{color:var(--navy);font-weight:600}.lead .msg{font-size:.92rem;white-space:pre-wrap}
+.pill{display:inline-block;font-size:.72rem;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--foam);color:var(--navy);margin:4px 4px 0 0}
+select,textarea{width:100%;font:inherit;padding:.5em .6em;border:1.5px solid var(--line);border-radius:8px;margin-bottom:8px}
+textarea{min-height:60px;resize:vertical}
+.actions{display:flex;gap:8px}.actions button{flex:1;padding:.5em;border-radius:8px;border:0;font:inherit;font-weight:600;cursor:pointer}
+.save{background:var(--navy);color:#fff}.del{background:#fde8e8;color:var(--red)}
+.empty{text-align:center;padding:60px;color:var(--muted)}
+.s-new{background:var(--sun);color:#061d38}.s-won{background:#d9f5e7;color:#11865a}.s-lost{background:#fde8e8;color:var(--red)}
+@media(max-width:800px){.lead{grid-template-columns:1fr}}
+</style></head>
+<body>
+<header><h1>Merit Pools · Leads</h1><form method="post" action="/admin/logout"><button>Sign out</button></form></header>
+<main>
+  <div class="stats" id="stats"></div>
+  <div class="toolbar"><input id="q" placeholder="Search name, phone, town, liner…"></div>
+  <div id="list"></div>
+</main>
+<script>
+const esc=s=>String(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let data={leads:[],counts:{},statuses:[]},filter='all';
+async function load(){const r=await fetch('/admin/api/leads');if(r.status===401)return location.href='/admin/login';data=await r.json();draw()}
+function draw(){
+  const total=data.leads.length;
+  document.getElementById('stats').innerHTML=[['all',total],...data.statuses.map(s=>[s,data.counts[s]||0])].map(([k,v])=>`<div class="stat ${filter===k?'active':''}" data-k="${k}"><b>${v}</b><span>${k}</span></div>`).join('');
+  document.querySelectorAll('.stat').forEach(el=>el.onclick=()=>{filter=el.dataset.k;draw()});
+  const q=document.getElementById('q').value.toLowerCase();
+  const rows=data.leads.filter(l=>(filter==='all'||l.status===filter)&&JSON.stringify(l).toLowerCase().includes(q));
+  document.getElementById('list').innerHTML=rows.length?rows.map(l=>`
+  <div class="lead">
+    <div><h3>${esc(l.name)}</h3>
+      <div class="meta">${new Date(l.created_at+'Z').toLocaleString()}</div>
+      <div><a href="tel:${esc(l.phone)}">${esc(l.phone)}</a></div>
+      ${l.email?`<div><a href="mailto:${esc(l.email)}">${esc(l.email)}</a></div>`:''}
+      <span class="pill s-${l.status}">${l.status}</span>${l.town?`<span class="pill">${esc(l.town)}</span>`:''}</div>
+    <div>${l.service?`<span class="pill">${esc(l.service)}</span>`:''}${l.pool_type?`<span class="pill">${esc(l.pool_type)}</span>`:''}${l.liner_pattern?`<span class="pill">Liner: ${esc(l.liner_pattern)}</span>`:''}
+      <p class="msg">${esc(l.message)||'<em>No message</em>'}</p></div>
+    <div><select data-id="${l.id}" class="st">${data.statuses.map(s=>`<option ${s===l.status?'selected':''}>${s}</option>`).join('')}</select>
+      <textarea data-id="${l.id}" class="nt" placeholder="Internal notes">${esc(l.notes)}</textarea>
+      <div class="actions"><button class="save" data-id="${l.id}">Save</button><button class="del" data-id="${l.id}">Delete</button></div></div>
+  </div>`).join(''):'<div class="empty">No leads here yet.</div>';
+  document.querySelectorAll('.save').forEach(b=>b.onclick=async()=>{const id=b.dataset.id;
+    await fetch('/admin/api/leads/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:document.querySelector(`.st[data-id="${id}"]`).value,notes:document.querySelector(`.nt[data-id="${id}"]`).value})});load()});
+  document.querySelectorAll('.del').forEach(b=>b.onclick=async()=>{if(!confirm('Delete this lead permanently?'))return;await fetch('/admin/api/leads/'+b.dataset.id,{method:'DELETE'});load()});
+}
+document.getElementById('q').oninput=draw;load();
+</script>
+</body></html>
