@@ -12,9 +12,8 @@ button{width:100%;padding:.9em;border:0;border-radius:999px;background:#d42a2f;c
 <body>
 <form method="post" action="/admin/login">
   <h1>Merit Pools</h1><p>Lead dashboard sign-in</p>
-  <div class="err" id="err">Incorrect username or password.</div>
-  <label for="u">Username</label><input id="u" name="username" autocomplete="username" required>
-  <label for="p">Password</label><input id="p" name="password" type="password" autocomplete="current-password" required>
+  <div class="err" id="err">Incorrect password.</div>
+  <label for="p">Password</label><input id="p" name="password" type="password" autofocus autocomplete="current-password" required>
   <button type="submit">Sign in</button>
 </form>
 <script>if(location.search.includes('error'))document.getElementById('err').style.display='block'</script>

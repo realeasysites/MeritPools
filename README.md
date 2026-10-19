@@ -10,7 +10,7 @@ cp .env.example .env      # then fill in the values
 npm run fetch-images      # one-time: self-host all photos from the old site's CDN
 npm start                 # http://localhost:3000
 ```
-Admin dashboard: `/admin` (login from ADMIN_USER / ADMIN_PASSWORD in `.env`).
+Admin dashboard: `/admin` (password only — ADMIN_PASSWORD in `.env`).
 
 ## Deploy (Render)
 - Build command: `npm install && npm run fetch-images`
